@@ -108,7 +108,7 @@ NAME = "overdiff"
 DESCRIPTION = "a diff implementation based on difflib that returns data structures describing changes"
 AUTHOR = "Markus 'fin' Hametner"
 AUTHOR_EMAIL = "fin+overdiff@fin.io"
-URL = "http://github.com/fin/overdiff/"
+URL = "http://github.com/luminousflux/overdiff/"
 VERSION = __import__(PACKAGE).__version__
 
 

@@ -7,7 +7,7 @@
 Development
 -----------
 
-The source repository can be found at https://github.com/fin/overdiff/
+The source repository can be found at https://github.com/luminousflux/overdiff/
 
 
 Contents
