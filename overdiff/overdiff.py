@@ -2,7 +2,6 @@ import difflib
 import sys
 sys.path.append('..')
 
-from fysom import fysom
 from difflib import SequenceMatcher, _count_leading
 
 

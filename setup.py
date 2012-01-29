@@ -103,12 +103,12 @@ def find_package_data(
     return out
 
 
-PACKAGE = ""
-NAME = ""
-DESCRIPTION = ""
-AUTHOR = ""
-AUTHOR_EMAIL = ""
-URL = ""
+PACKAGE = "overdiff"
+NAME = "overdiff"
+DESCRIPTION = "a diff implementation based on difflib that returns data structures describing changes"
+AUTHOR = "Markus 'fin' Hametner"
+AUTHOR_EMAIL = "fin+overdiff@fin.io"
+URL = "http://github.com/fin/overdiff/"
 VERSION = __import__(PACKAGE).__version__
 
 
@@ -116,7 +116,7 @@ setup(
     name=NAME,
     version=VERSION,
     description=DESCRIPTION,
-    long_description=read("README.rst"),
+    long_description=read("README.md"),
     author=AUTHOR,
     author_email=AUTHOR_EMAIL,
     license="BSD",
