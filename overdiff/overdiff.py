@@ -1,14 +1,8 @@
-import difflib
 import sys
-sys.path.append('..')
-
 from difflib import SequenceMatcher, _count_leading
 
-
-#OURJUNK = lambda x: x in ('\n',' ','\t')
 OURJUNK = None
-
-translation_table = {'replace': '/','insert':'+','delete':'-'}
+TT = {'replace': '/','insert':'+','delete':'-'}
 
 class Overdiffer(object):
     def diff(self, pars1, pars2):
@@ -22,7 +16,7 @@ class Overdiffer(object):
                             pars2, blo, bhi, .1):
                     yield x
             elif tag != 'equal':
-                yield (translation_table[tag], alo, ahi, blo, bhi)
+                yield (TT[tag], alo, ahi, blo, bhi)
 
     ##
     ## starting here was originally a copy from python2.6's difflib.py.
@@ -128,7 +122,7 @@ class Overdiffer(object):
             for tag, ai1, ai2, bj1, bj2 in cruncher.get_opcodes():
                 if tag == 'equal':
                     continue
-                yield (translation_table[tag], best_i, best_i, best_j, best_j, ai1, ai2, bj1, bj2)
+                yield (TT[tag], best_i, best_i, best_j, best_j, ai1, ai2, bj1, bj2)
         else:
             # the synch pair is identical
             pass
