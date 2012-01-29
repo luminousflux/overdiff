@@ -21,7 +21,7 @@ class Overdiffer(object):
         matcher = SequenceMatcher(OURJUNK, pars1, pars2)
         for tag, alo, ahi, blo, bhi in matcher.get_opcodes():
             if tag == 'replace':
-                print '\n'.join([x.replace('\n', ' ') for x in
+                print '\n'.join([x for x in
                         self._fancy_replace(
                             pars1, alo, ahi,
                             pars2, blo, bhi, .1)
