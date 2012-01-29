@@ -9,26 +9,21 @@ from difflib import SequenceMatcher, _count_leading
 #OURJUNK = lambda x: x in ('\n',' ','\t')
 OURJUNK = None
 
-class Overdiffer(object):
-    def diff(self, text1, text2, split = '\n\n', depth=0):
-        self.charjunk = OURJUNK
+translation_table = {'replace': '/','insert':'+','delete':'-'}
 
-        if depth>3:
-            return 'fail'
-        pars1 = text1.strip().split(split)
-        pars2 = text2.strip().split(split)
+class Overdiffer(object):
+    def diff(self, pars1, pars2):
+        self.charjunk = OURJUNK
 
         matcher = SequenceMatcher(OURJUNK, pars1, pars2)
         for tag, alo, ahi, blo, bhi in matcher.get_opcodes():
             if tag == 'replace':
-                print '\n'.join([x for x in
-                        self._fancy_replace(
+                for x in self._fancy_replace(
                             pars1, alo, ahi,
-                            pars2, blo, bhi, .1)
-                        ]
-                        )
-            else:
-                print 'WOOT'+tag
+                            pars2, blo, bhi, .1):
+                    yield x
+            elif tag != 'equal':
+                yield (translation_table[tag], alo, ahi, blo, bhi)
 
     ##
     ## starting here was originally a copy from python2.6's difflib.py.
@@ -36,21 +31,20 @@ class Overdiffer(object):
     ## * _fancy_replace cutoff is now a parameter
     ## * return a data structure describing the changes instead of yieding strings
     ##
-    def _dump(self, tag, x, lo, hi):
+    def _dump(self, tag, x, alo, ahi, blo, bhi):
         """Generate comparison results for a same-tagged range."""
-        for i in xrange(lo, hi):
-            yield '%s %s' % (tag, x[i])
+        yield (tag, alo, ahi, blo, bhi)
 
     def _plain_replace(self, a, alo, ahi, b, blo, bhi):
         assert alo < ahi and blo < bhi
         # dump the shorter block first -- reduces the burden on short-term
         # memory if the blocks are of very different sizes
         if bhi - blo < ahi - alo:
-            first  = self._dump('+', b, blo, bhi)
-            second = self._dump('-', a, alo, ahi)
+            first  = self._dump('+', b, alo, ahi, blo, bhi)
+            second = self._dump('-', a, alo, ahi, blo, bhi)
         else:
-            first  = self._dump('-', a, alo, ahi)
-            second = self._dump('+', b, blo, bhi)
+            first  = self._dump('-', a, alo, ahi, blo, bhi)
+            second = self._dump('+', b, alo, ahi, blo, bhi)
 
         for g in first, second:
             for line in g:
@@ -133,24 +127,12 @@ class Overdiffer(object):
             atags = btags = ""
             cruncher.set_seqs(aelt, belt)
             for tag, ai1, ai2, bj1, bj2 in cruncher.get_opcodes():
-                la, lb = ai2 - ai1, bj2 - bj1
-                if tag == 'replace':
-                    atags += '^' * la
-                    btags += '^' * lb
-                elif tag == 'delete':
-                    atags += '-' * la
-                elif tag == 'insert':
-                    btags += '+' * lb
-                elif tag == 'equal':
-                    atags += ' ' * la
-                    btags += ' ' * lb
-                else:
-                    raise ValueError, 'unknown tag %r' % (tag,)
-            for line in self._qformat(aelt, belt, atags, btags):
-                yield line
+                if tag == 'equal':
+                    continue
+                yield (translation_table[tag], best_i, best_i, best_j, best_j, ai1, ai2, bj1, bj2)
         else:
             # the synch pair is identical
-            yield '  ' + aelt
+            pass
 
         # pump out diffs from after the synch point
         for line in self._fancy_helper(a, best_i+1, ahi, b, best_j+1, bhi):
@@ -162,44 +144,13 @@ class Overdiffer(object):
             if blo < bhi:
                 g = self._fancy_replace(a, alo, ahi, b, blo, bhi)
             else:
-                g = self._dump('-', a, alo, ahi)
+                g = self._dump('-', a, alo, ahi, blo, bhi)
         elif blo < bhi:
-            g = self._dump('+', b, blo, bhi)
+            g = self._dump('+', b, alo, ahi, blo, bhi)
 
         for line in g:
             yield line
 
-    def _qformat(self, aline, bline, atags, btags):
-        r"""
-        Format "?" output and deal with leading tabs.
-
-        Example:
-
-        >>> d = Differ()
-        >>> results = d._qformat('\tabcDefghiJkl\n', '\t\tabcdefGhijkl\n',
-        ...                      '  ^ ^  ^      ', '+  ^ ^  ^      ')
-        >>> for line in results: print repr(line)
-        ...
-        '- \tabcDefghiJkl\n'
-        '? \t ^ ^  ^\n'
-        '+ \t\tabcdefGhijkl\n'
-        '? \t  ^ ^  ^\n'
-        """
-
-        # Can hurt, but will probably help most of the time.
-        common = min(_count_leading(aline, "\t"),
-                     _count_leading(bline, "\t"))
-        common = min(common, _count_leading(atags[:common], " "))
-        atags = atags[common:].rstrip()
-        btags = btags[common:].rstrip()
-
-        yield "- " + aline
-        if atags:
-            yield "? %s%s\n" % ("\t" * common, atags)
-
-        yield "+ " + bline
-        if btags:
-            yield "? %s%s\n" % ("\t" * common, btags)
     ##
     ## end of originally-copied difflib.py code
     ##
@@ -208,5 +159,12 @@ class Overdiffer(object):
 
 if __name__ == '__main__':
     import overdiff_test
-    Overdiffer().diff(overdiff_test.text1, overdiff_test.text2)
+    pars1 = overdiff_test.text1.strip().split('\n\n')
+    pars2 = overdiff_test.text2.strip().split('\n\n')
+    for ts in Overdiffer().diff(pars1, pars2):
+        tag, alo, ahi, blo, bhi = ts[:5]
+        ilo, ihi, jlo, jhi = (0,0,0,0)
+        if len(ts)>5:
+            ilo, ihi, jlo, jhi = ts[5:]
 
+        print tag, alo, ahi, blo, bhi, ilo, ihi, jlo, jhi
