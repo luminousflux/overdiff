@@ -1,4 +1,5 @@
 import sys
+import copy
 from difflib import SequenceMatcher, _count_leading
 
 OURJUNK = None
@@ -149,15 +150,146 @@ class Overdiffer(object):
     ##
 
 
+def split_at_token(haystack, hstart, hend, token, selections):
+    # haystack = string
+    # workspace = haystack[pstart:pend]
+    # token = where to split selections
+    # returns new selections
+
+    sels = copy.copy(selections)
+    splits = []
+
+    token_in_selection = True
+    tklen = len(token)
+
+    x = hstart-1
+    while True:
+        x = haystack.find(token, x+1)
+        if x>=0 and x<hend:
+            splits.append(x)
+        else:
+            break
+
+    if not splits:
+        token_in_selection = False
+
+    while token_in_selection:
+        token_in_selection = False
+        for i, split in zip(xrange(0,len(splits)), splits):
+            for sel in [(start,end,weight,) for (start,end,weight,) in sels if start<hend and end > hstart ]:
+                start, end, weight = sel
+                if split > start and split < end:
+                    token_in_selection = True
+                    sels.remove(sel)
+                    while haystack[start:split].startswith(token) and start<split:
+                        # don't start at token
+                        start+=tklen
+                    if start<split:
+                        # don't start at token
+                        sels.append((start, split, weight,))
+
+                    split = split+tklen
+                    while haystack[split:end].startswith(token) and split < end:
+                        # don't start at token
+                        split += tklen
+                    while haystack[end-tklen:end].endswith(token) and split < end:
+                        # don't end at token
+                        end -= tklen
+                    if split<end:
+                        sels.append((split, end, weight,))
+    return sels
+
+
+def expand_selection(haystack, hstart, hend, token, selections, expand_ratio = .2):
+    # token = tokens between which to expand
+    # selections = selections to expand
+
+    selections = split_at_token(haystack, hstart, hend, token, selections)
+
+    sels = copy.copy(selections)
+
+    splits = [hstart]
+    x = hstart-1
+    while True:
+        x = haystack.find(token, x+1)
+        if x>=0 and x<hend:
+            splits.append(x)
+        else:
+            break
+
+    splits.append(hend)
+
+
+    for splitstart, splitend in zip(splits[0:len(splits)-1], splits[1:len(splits)-1]):
+        splitsels = [(start,end,weight,) for (start,end,weight,) in sels if start<splitend and end > splitstart ]
+        print splitstart, splitend, splitsels
+
+        selected_weighted = sum([(end-start)*weight for (start,end,weight,) in splitsels])
+        selected_num = sum([(end-start) for (start,end,weight,) in splitsels])
+
+
+        if selected_num > (splitend-splitstart)*expand_ratio:
+            for s in splitsels:
+                sels.remove(s)
+            sels.append((splitstart, splitend, selected_weighted/selected_num,)) # this totally overestimates the weight here.
+                                                                    # TODO: improve.
+        splitsels = [(start,end,weight,) for (start,end,weight,) in sels if start<splitend and end > splitstart ]
+        print splitstart, splitend, splitsels
+
+    return sels
+
+
+def selection_to_s(haystack, selections):
+    output = []
+    cur = 0
+    for sel in selections:
+        start, end, weight = sel
+        previous_split = -1
+        output.append(haystack[cur:start])
+        output.append('<ins>%s</ins>' % haystack[start:end])
+        cur = end
+    output.append(haystack[cur:])
+    return ''.join(output)
+
 
 if __name__ == '__main__':
     import overdiff_test
     pars1 = overdiff_test.text1.strip().split('\n\n')
     pars2 = overdiff_test.text2.strip().split('\n\n')
-    for ts in Overdiffer().diff(pars1, pars2):
-        tag, alo, ahi, blo, bhi = ts[:5]
-        ilo, ihi, jlo, jhi = (0,0,0,0)
-        if len(ts)>5:
-            ilo, ihi, jlo, jhi = ts[5:]
+    diffs = list(Overdiffer().diff(pars1, pars2))
+    cur_diff = 0
 
-        print tag, alo, ahi, blo, bhi, ilo, ihi, jlo, jhi
+    curj = 0
+    sentencebuffer = []
+
+    # tag, alo, ahi, blo, bhi //, ilo, ihi, jlo, jhi
+    for i in xrange(0, len(pars2)):
+        tag, alo, ahi, blo, bhi = diffs[cur_diff][:5]
+        while blo<i:
+            cur_diff+=1
+            tag, alo, ahi, blo, bhi = diffs[cur_diff][:5]
+
+        curj = 0
+        while blo<=i and bhi>=i:
+            if tag != '-':
+                if blo>i:
+                    print '='
+                    print pars2[i]
+                elif len(diffs[cur_diff])<6:
+                    print tag
+                    print pars2[i]
+                else:
+                    ilo, ihi, jlo, jhi = diffs[cur_diff][5:]
+                    sentence = pars2[i]
+                    if curj < jlo:
+                        print '='
+                        print sentence[curj:jlo]
+                    print tag
+                    print sentence[jlo:jhi]
+                    curj = jhi
+
+            cur_diff+=1
+            if cur_diff >= len(diffs):
+                break
+            tag, alo, ahi, blo, bhi = diffs[cur_diff][:5]
+
