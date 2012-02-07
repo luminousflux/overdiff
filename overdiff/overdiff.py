@@ -1,6 +1,8 @@
 import sys
 import copy
 from difflib import SequenceMatcher, _count_leading
+from collections import defaultdict
+from operator import itemgetter
 
 OURJUNK = None
 TT = {'replace': '/','insert':'+','delete':'-'}
@@ -165,13 +167,14 @@ def split_at_token(haystack, hstart, hend, token, selections):
     x = hstart-1
     while True:
         x = haystack.find(token, x+1)
-        if x>=0 and x<hend:
+        if x>=0 and x<=hend:
             splits.append(x)
         else:
             break
 
     if not splits:
         token_in_selection = False
+
 
     while token_in_selection:
         token_in_selection = False
@@ -197,6 +200,7 @@ def split_at_token(haystack, hstart, hend, token, selections):
                         end -= tklen
                     if split<end:
                         sels.append((split, end, weight,))
+
     return sels
 
 
@@ -222,7 +226,6 @@ def expand_selection(haystack, hstart, hend, token, selections, expand_ratio = .
 
     for splitstart, splitend in zip(splits[0:len(splits)-1], splits[1:len(splits)-1]):
         splitsels = [(start,end,weight,) for (start,end,weight,) in sels if start<splitend and end > splitstart ]
-        print splitstart, splitend, splitsels
 
         selected_weighted = sum([(end-start)*weight for (start,end,weight,) in splitsels])
         selected_num = sum([(end-start) for (start,end,weight,) in splitsels])
@@ -231,11 +234,10 @@ def expand_selection(haystack, hstart, hend, token, selections, expand_ratio = .
         if selected_num > (splitend-splitstart)*expand_ratio:
             for s in splitsels:
                 sels.remove(s)
-            sels.append((splitstart, splitend, selected_weighted/selected_num,)) # this totally overestimates the weight here.
-                                                                    # TODO: improve.
+            sels.append((splitstart, splitend, selected_weighted/selected_num,))
+                # this totally overestimates the weight here.
+                # TODO: improve.
         splitsels = [(start,end,weight,) for (start,end,weight,) in sels if start<splitend and end > splitstart ]
-        print splitstart, splitend, splitsels
-
     return sels
 
 
@@ -244,52 +246,78 @@ def selection_to_s(haystack, selections):
     cur = 0
     for sel in selections:
         start, end, weight = sel
-        previous_split = -1
+        if cur > start:
+            raise Exception('selection_to_s expects ordered input!')
         output.append(haystack[cur:start])
         output.append('<ins>%s</ins>' % haystack[start:end])
         cur = end
     output.append(haystack[cur:])
     return ''.join(output)
 
+def _each_with_index(collection):
+    i = 0
+    for x in collection:
+        yield x,i
+        i+=1
+def _collect_nonnegative(function, x):
+    while True:
+        x = function(x)
+        if x>=0:
+            yield x
+        else:
+            break
 
-if __name__ == '__main__':
-    import overdiff_test
-    pars1 = overdiff_test.text1.strip().split('\n\n')
-    pars2 = overdiff_test.text2.strip().split('\n\n')
-    diffs = list(Overdiffer().diff(pars1, pars2))
-    cur_diff = 0
+def _ordered_pairs(collection):
+    for i,y in zip(xrange(0,len(collection)-1), xrange(1, len(collection))):
+        yield collection[i], collection[y]
 
-    curj = 0
-    sentencebuffer = []
+def overdiff_intraparagraph(paragraph2, diffs, token):
+    print '\n\nintraparagraph'
+    sentences = [0]
 
-    # tag, alo, ahi, blo, bhi //, ilo, ihi, jlo, jhi
-    for i in xrange(0, len(pars2)):
-        tag, alo, ahi, blo, bhi = diffs[cur_diff][:5]
-        while blo<i:
-            cur_diff+=1
-            tag, alo, ahi, blo, bhi = diffs[cur_diff][:5]
+    sels = []
+    for x in diffs:
+        if len(x)<=5:
+            continue
+        alen = x[6]-x[5] or 1
+        blen = x[8]-x[7] or 1 #  could be zero
+        sels.append( (x[7],x[8],alen/blen,) )
+    print sels
 
-        curj = 0
-        while blo<=i and bhi>=i:
-            if tag != '-':
-                if blo>i:
-                    print '='
-                    print pars2[i]
-                elif len(diffs[cur_diff])<6:
-                    print tag
-                    print pars2[i]
-                else:
-                    ilo, ihi, jlo, jhi = diffs[cur_diff][5:]
-                    sentence = pars2[i]
-                    if curj < jlo:
-                        print '='
-                        print sentence[curj:jlo]
-                    print tag
-                    print sentence[jlo:jhi]
-                    curj = jhi
+    sentenceendsfun = lambda x: paragraph2.find('.', x+1)           # fuck fuck fuck fuck.
+                                                                    # should have used regex
+    sentenceends = list(_collect_nonnegative(sentenceendsfun, -1))
 
-            cur_diff+=1
-            if cur_diff >= len(diffs):
-                break
-            tag, alo, ahi, blo, bhi = diffs[cur_diff][:5]
+    for x,y in _ordered_pairs(sentenceends):
+        print selection_to_s(paragraph2, sels)
+        print '\n\n'
+        sels = expand_selection(paragraph2, x,y, '.', sels)
+        sels.sort(key=itemgetter(0))
+
+    print sels
+    print '-'
+    print selection_to_s(paragraph2, sels)
+
+    print '\n/intraparagraph\n\n'
+
+    yield sels
+
+def overdiff(text1, text2, token='\n\n'):
+    t1 = text1.strip().split(token)
+    t2 = text2.strip().split(token)
+
+    ds = Overdiffer().diff(t1, t2)
+
+    related_diffs = defaultdict(list)
+
+    for d in ds:
+        tag, alo, ahi, blo, bhi = d[:5]
+        for x in xrange(alo, ahi+1):
+            related_diffs[x].append(d)
+    for line, index in _each_with_index(t2):
+        if related_diffs[index]:
+            for x in overdiff_intraparagraph(line, related_diffs[index], token):
+                yield x
+        else:
+            yield index
 

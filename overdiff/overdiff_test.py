@@ -39,13 +39,20 @@ class OverdiffTest(unittest.TestCase):
         end = len(haystack)
         selection = [(start,end,1,)]
 
-        expected_selections = set([(0,21,1,),(22,31,1,),(32,38,1,),(41,53,1,),(54,58,1,)])
+        expected_selections = set([(0,21,1,),(22,31,1,),
+            (32,38,1,),(41,53,1,),(54,58,1,)])
 
         selections = overdiff.split_at_token(haystack,start,end,' ', selection)
         selections = set(selections)
 
-        self.assertFalse(self._selections_are_nonoverlapping(selections), selections)
-        self.assertEquals(expected_selections, selections, 'same: %s / difference: %s' % (expected_selections.intersection(selections), expected_selections.symmetric_difference(selections)))
+        self.assertFalse(self._selections_are_nonoverlapping(selections),
+                selections)
+        self.assertEquals(expected_selections,
+                selections,
+                'same: %s / difference: %s' %
+                    (expected_selections.intersection(selections),
+                     expected_selections.symmetric_difference(selections)
+                    ))
 
     def testExpand(self):
 
@@ -54,11 +61,7 @@ class OverdiffTest(unittest.TestCase):
 
         selection = [(10, 15, 1,), (16, 18, 1),]
 
-        print overdiff.selection_to_s(haystack, selection)
-
         sels = overdiff.expand_selection(haystack, start, end, ' ', selection)
-        print overdiff.selection_to_s(haystack, sels)
-
 
     def _selections_are_nonoverlapping(self, selections):
         for x in selections:
@@ -73,6 +76,11 @@ class OverdiffTest(unittest.TestCase):
                         if s2<=e1:
                             return '%s and %s overlap' % (x,y,)
         return None
+
+    def testDiff(self):
+        diffs = list(overdiff.overdiff(text1, text2))
+        print diffs
+
 
 if __name__ == '__main__':
     unittest.main()
