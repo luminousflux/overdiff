@@ -223,13 +223,11 @@ def expand_selection(haystack, hstart, hend, token, selections, expand_ratio = .
 
     splits.append(hend)
 
-
-    for splitstart, splitend in zip(splits[0:len(splits)-1], splits[1:len(splits)-1]):
+    for splitstart, splitend in zip(splits[0:len(splits)-1], splits[1:len(splits)]):
         splitsels = [(start,end,weight,) for (start,end,weight,) in sels if start<splitend and end > splitstart ]
 
         selected_weighted = sum([(end-start)*weight for (start,end,weight,) in splitsels])
         selected_num = sum([(end-start) for (start,end,weight,) in splitsels])
-
 
         if selected_num > (splitend-splitstart)*expand_ratio:
             for s in splitsels:
@@ -272,37 +270,35 @@ def _ordered_pairs(collection):
         yield collection[i], collection[y]
 
 def overdiff_intraparagraph(paragraph2, diffs, token):
-    print '\n\nintraparagraph'
     sentences = [0]
 
     sels = []
     for x in diffs:
         if len(x)<=5:
             continue
-        alen = x[6]-x[5] or 1
-        blen = x[8]-x[7] or 1 #  could be zero
-        sels.append( (x[7],x[8],alen/blen,) )
-    print sels
+        alen = (x[6]-x[5]) or 1
+        blen = (x[8]-x[7]) or 1 #  could be zero
+        weight = (alen/blen) or 1
+        sels.append( (x[7],x[8],weight,) )
 
     sentenceendsfun = lambda x: paragraph2.find('.', x+1)           # fuck fuck fuck fuck.
                                                                     # should have used regex
     sentenceends = list(_collect_nonnegative(sentenceendsfun, -1))
+    sentenceends.insert(0,0)
 
     for x,y in _ordered_pairs(sentenceends):
-        print selection_to_s(paragraph2, sels)
-        print '\n\n'
         sels = expand_selection(paragraph2, x,y, '.', sels)
         sels.sort(key=itemgetter(0))
-
-    print sels
-    print '-'
-    print selection_to_s(paragraph2, sels)
-
-    print '\n/intraparagraph\n\n'
+        sels = expand_selection(paragraph2, x,y, ' ', sels)
+        sels.sort(key=itemgetter(0))
+        sels = expand_selection(paragraph2, x,y, '.', sels)
+        sels.sort(key=itemgetter(0))
 
     yield sels
 
 def overdiff(text1, text2, token='\n\n'):
+    """return what changed in paragraphs as related to text2.
+       this API _will_ be revised. """
     t1 = text1.strip().split(token)
     t2 = text2.strip().split(token)
 
