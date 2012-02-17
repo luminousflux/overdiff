@@ -294,7 +294,7 @@ def overdiff_intraparagraph(paragraph2, diffs, token):
         sels = expand_selection(paragraph2, x,y, '.', sels)
         sels.sort(key=itemgetter(0))
 
-    yield sels
+    return sels
 
 def overdiff(text1, text2, token='\n\n'):
     """return what changed in paragraphs as related to text2.
@@ -312,8 +312,7 @@ def overdiff(text1, text2, token='\n\n'):
             related_diffs[x].append(d)
     for line, index in _each_with_index(t2):
         if related_diffs[index]:
-            for x in overdiff_intraparagraph(line, related_diffs[index], token):
-                yield x
+            yield overdiff_intraparagraph(line, related_diffs[index], token)
         else:
-            yield index
+            yield []
 
