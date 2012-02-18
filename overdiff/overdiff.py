@@ -275,7 +275,7 @@ def overdiff_intraparagraph(paragraph2, diffs, token):
     sels = []
     for x in diffs:
         if len(x)<=5:
-            continue
+            return [(0, len(paragraph2), 1)]
         alen = (x[6]-x[5]) or 1
         blen = (x[8]-x[7]) or 1 #  could be zero
         weight = (alen/blen) or 1
@@ -310,6 +310,7 @@ def overdiff(text1, text2, token='\n\n'):
         tag, alo, ahi, blo, bhi = d[:5]
         for x in xrange(alo, ahi+1):
             related_diffs[x].append(d)
+
     for line, index in _each_with_index(t2):
         if related_diffs[index]:
             yield overdiff_intraparagraph(line, related_diffs[index], token)
