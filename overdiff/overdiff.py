@@ -308,7 +308,7 @@ def overdiff(text1, text2, token='\n\n'):
 
     for d in ds:
         tag, alo, ahi, blo, bhi = d[:5]
-        for x in xrange(alo, ahi+1):
+        for x in xrange(blo, bhi+1):
             related_diffs[x].append(d)
 
     for line, index in _each_with_index(t2):
