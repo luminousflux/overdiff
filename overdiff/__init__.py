@@ -257,7 +257,7 @@ def selection_to_s(haystack, selections):
         if not block:
             output.append('<ins>%s</ins>' % haystack[start:end])
         else:
-            output.append('.ins %s' % haystack[start:end])
+            output.append('.ins %s' % haystack[start:end].strip('\n'))
         cur = end
     output.append(haystack[cur:])
     return ''.join(output)
