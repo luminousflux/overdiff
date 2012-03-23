@@ -7,6 +7,7 @@ import copy
 from difflib import SequenceMatcher, _count_leading
 from collections import defaultdict
 from operator import itemgetter
+import re
 
 OURJUNK = None
 TT = {'replace': '/','insert':'+','delete':'-'}
@@ -243,7 +244,54 @@ def expand_selection(haystack, hstart, hend, token, selections, expand_ratio = .
     return sels
 
 
-def selection_to_s(haystack, selections):
+def selection_to_s(haystack, selections, markdown=False):
+    output = []
+    cur = 0
+    haystacklen = len(haystack)
+    for sel2 in selections:
+        start2, end2, weight2 = sel2
+        for start, end in (selection_split_markdown(haystack, start2, end2) if markdown else ((start2, end2,),) ):
+            if cur > start:
+                raise Exception('selection_to_s expects ordered input!')
+            output.append(haystack[cur:start])
+
+            block = start == 0 and end == len(haystack)
+            if not block:
+                output.append('<ins>%s</ins>' % haystack[start:end])
+            else:
+                output.append('.ins %s' % haystack[start:end].strip('\n'))
+            cur = end
+    output.append(haystack[cur:])
+    return ''.join(output)
+
+def selection_split_markdown(haystack, start, end):
+    blocklevelelements = [r'\n\*\s', r'\n\+\s', r'\n-\s', r'\n\s*\d+\.\s']
+    for x in blocklevelelements[0:len(blocklevelelements)]:
+        blocklevelelements.append(x.replace(r'\n',r'^'))
+    print blocklevelelements
+    string = haystack[start:end]
+    holes = []
+    for ble in blocklevelelements:
+        for m in re.finditer(ble, string):
+            holes.append(m.span())
+    holes.sort()
+    holes = [[start+y for y in x] for x in holes]
+    selection = [start]
+    while holes:
+        hs,he = holes[0]
+        holes = holes[1:]
+        selection.append(hs)
+        selection.append(he)
+    selection.append(end)
+    result = []
+    while selection:
+        if selection[1]-selection[0] > 0:
+            result.append(selection[0:2])
+        selection = selection[2:]
+    return result
+
+
+def selection_to_s_markdown(haystack, selections):
     output = []
     cur = 0
     haystacklen = len(haystack)
@@ -261,6 +309,7 @@ def selection_to_s(haystack, selections):
         cur = end
     output.append(haystack[cur:])
     return ''.join(output)
+
 
 def _each_with_index(collection):
     i = 0
