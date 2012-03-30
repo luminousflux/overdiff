@@ -248,47 +248,61 @@ def selection_to_s(haystack, selections, markdown=False):
     output = []
     cur = 0
     haystacklen = len(haystack)
-    for sel2 in selections:
-        start2, end2, weight2 = sel2
-        for start, end in (selection_split_markdown(haystack, start2, end2) if markdown else ((start2, end2,),) ):
-            if cur > start:
-                raise Exception('selection_to_s expects ordered input!')
-            output.append(haystack[cur:start])
 
-            block = start == 0 and end == len(haystack)
-            if not block:
-                output.append('<ins>%s</ins>' % haystack[start:end])
-            else:
-                output.append('.ins %s' % haystack[start:end].strip('\n'))
-            cur = end
+    if markdown:
+        selections = selections_split_markdown(haystack, selections)
+
+    for sel in selections:
+        start, end, weight = sel
+        if cur > start:
+            raise Exception('selection_to_s expects ordered input!')
+        output.append(haystack[cur:start])
+
+        block = start == 0 and end == len(haystack)
+        if not block:
+            output.append('<ins>%s</ins>' % haystack[start:end])
+        else:
+            output.append('.ins %s' % haystack[start:end].strip('\n'))
+        cur = end
     output.append(haystack[cur:])
     return ''.join(output)
 
-def selection_split_markdown(haystack, start, end):
+def selections_split_markdown(haystack, selections):
     blocklevelelements = [r'\n\*\s', r'\n\+\s', r'\n-\s', r'\n\s*\d+\.\s']
     for x in blocklevelelements[0:len(blocklevelelements)]:
         blocklevelelements.append(x.replace(r'\n',r'^'))
-    print blocklevelelements
-    string = haystack[start:end]
+    string = haystack
     holes = []
     for ble in blocklevelelements:
         for m in re.finditer(ble, string):
+            print 'match', m
             holes.append(m.span())
     holes.sort()
-    holes = [[start+y for y in x] for x in holes]
-    selection = [start]
-    while holes:
-        hs,he = holes[0]
-        holes = holes[1:]
-        selection.append(hs)
-        selection.append(he)
-    selection.append(end)
-    result = []
-    while selection:
-        if selection[1]-selection[0] > 0:
-            result.append(selection[0:2])
-        selection = selection[2:]
-    return result
+
+    selectioncuts = []
+    for selection in selections:
+        start, end, weight = selection
+        otherstarts = [e for s,e in holes if s<start and e>start]
+        if otherstarts:
+            start = otherstarts[-1]
+        otherends = [s for s,e in holes if s<end and e>end]
+        if otherends:
+            end = otherends[0]
+
+        selectioncuts.append(start)
+        for hole in [(s,e,) for (s,e,) in holes if s>=start and e<=end]:
+            hs,he = hole
+            selectioncuts.append(hs)
+            selectioncuts.append(he)
+        selectioncuts.append(end)
+
+    selections = []
+    while selectioncuts:
+        if selectioncuts[1]-selectioncuts[0] > 0:
+            selections.append(selectioncuts[0:2])
+        selectioncuts = selectioncuts[2:]
+    selections = [(s,e,1,) for (s,e,) in selections]
+    return selections
 
 
 def selection_to_s_markdown(haystack, selections):
