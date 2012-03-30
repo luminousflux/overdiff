@@ -275,7 +275,6 @@ def selections_split_markdown(haystack, selections):
     holes = []
     for ble in blocklevelelements:
         for m in re.finditer(ble, string):
-            print 'match', m
             holes.append(m.span())
     holes.sort()
 
