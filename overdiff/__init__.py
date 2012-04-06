@@ -8,7 +8,6 @@ from difflib import SequenceMatcher, _count_leading
 from collections import defaultdict
 from operator import itemgetter
 import re
-import markdown
 
 OURJUNK = None
 TT = {'replace': '/','insert':'+','delete':'-'}
@@ -269,6 +268,7 @@ def selection_to_s(haystack, selections, markdown=False):
     return ''.join(output)
 
 def selections_split_markdown(haystack, selections):
+    import markdown
     blocklevelelements = [r'\n\*\s', r'\n\+\s', r'\n-\s', r'\n\s*\d+\.\s', markdown.inlinepatterns.LINK_RE]
     for x in blocklevelelements[0:len(blocklevelelements)]:
         blocklevelelements.append(x.replace(r'\n',r'^'))
