@@ -268,7 +268,7 @@ def selection_to_s(haystack, selections, markdown=False):
     return ''.join(output)
 
 def selections_split_markdown(haystack, selections):
-    blocklevelelements = [r'\n\*\s', r'\n\+\s', r'\n-\s', r'\n\s*\d+\.\s']
+    blocklevelelements = [r'\n\*\s', r'\n\+\s', r'\n-\s', r'\n\s*\d+\.\s', r'''\(\s*(<.*?>|((?:(?:\(.*?\))|[^\(\)]))*?)\s*((['"])(.*?)\12\s*)?\)''']
     for x in blocklevelelements[0:len(blocklevelelements)]:
         blocklevelelements.append(x.replace(r'\n',r'^'))
     string = haystack
