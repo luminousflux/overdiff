@@ -240,7 +240,6 @@ def expand_selection(haystack, hstart, hend, token, selections, expand_ratio = .
             sels.append((splitstart, splitend, selected_weighted/selected_num,))
                 # this totally overestimates the weight here.
                 # TODO: improve.
-        splitsels = [(start,end,weight,) for (start,end,weight,) in sels if start<splitend and end > splitstart ]
     return sels
 
 
@@ -260,34 +259,77 @@ def selection_to_s(haystack, selections, markdown=False):
 
         block = start == 0 and end == len(haystack)
         if not block:
-            output.append('<ins>%s</ins>' % haystack[start:end])
+            output.append('<ins markdown="true">%s</ins>' % haystack[start:end])
         else:
             output.append('.ins %s' % haystack[start:end].strip('\n'))
         cur = end
     output.append(haystack[cur:])
     return ''.join(output)
 
+def _find_REs(REs, string):
+    matches = []
+    for ble in REs:
+        for m in re.finditer(ble, string):
+            matches.append(m.span())
+    matches.sort()
+    return matches
+
+def _connect_overlapping_selections(selections):
+    newselections = []
+    for selection in selections:
+        if newselections and newselections[-1][1] >= selection[0]:
+            print 'should connect overlapping: %s, %s' % (repr(newselections[-1]), repr(selection),)
+            if selection[1] > newselections[-1][0]: # exclude the case where selection is a subset of newselection[-1]
+                t = list(newselections[-1])
+                t[1] = selection[1]
+                newselections[-1] = tuple(t)
+        else:
+            newselections.append(selection)
+    return newselections
+
+def _exclude_ranges_at_edges(selection, ranges):
+    start, end = selection[:2]
+
+    otherstarts = [e for s,e in ranges if s<start and e>start]
+    if otherstarts:
+        start = otherstarts[-1]
+    otherends = [s for s,e in ranges if s<end and e>end]
+    if otherends:
+        end = otherends[0]
+    return start, end
+
+def _include_ranges_at_edges(selection, ranges):
+    start, end = selection[:2]
+
+    otherstarts = [s for s,e in ranges if s<start and e>start]
+    if otherstarts:
+        start = otherstarts[0]
+    otherends = [e for s,e in ranges if s<end and e>end]
+    if otherends:
+        end = otherends[-1]
+    return start, end
+
+
 def selections_split_markdown(haystack, selections):
     import markdown
-    blocklevelelements = [r'\n\*\s', r'\n\+\s', r'\n-\s', r'\n\s*\d+\.\s', markdown.inlinepatterns.LINK_RE]
-    for x in blocklevelelements[0:len(blocklevelelements)]:
-        blocklevelelements.append(x.replace(r'\n',r'^'))
+
+    untouchables = [r'\n\*\s', r'\n\+\s', r'\n-\s', r'\n\s*\d+\.\s', ]
+    impartibles = [markdown.inlinepatterns.LINK_RE, ]
+
+    for x in untouchables[0:len(untouchables)]:
+        untouchables.append(x.replace(r'\n',r'^'))
     string = haystack
-    holes = []
-    for ble in blocklevelelements:
-        for m in re.finditer(ble, string):
-            holes.append(m.span())
-    holes.sort()
+    holes = _find_REs(untouchables, string)
+    fills = _find_REs(impartibles, string)
 
     selectioncuts = []
     for selection in selections:
         start, end, weight = selection
-        otherstarts = [e for s,e in holes if s<start and e>start]
-        if otherstarts:
-            start = otherstarts[-1]
-        otherends = [s for s,e in holes if s<end and e>end]
-        if otherends:
-            end = otherends[0]
+
+        start, end = _exclude_ranges_at_edges(selection, holes)
+        selection = (start, end, weight)
+        start, end = _include_ranges_at_edges(selection, fills)
+        selection = (start, end, weight)
 
         selectioncuts.append(start)
         for hole in [(s,e,) for (s,e,) in holes if s>=start and e<=end]:
@@ -295,13 +337,16 @@ def selections_split_markdown(haystack, selections):
             selectioncuts.append(hs)
             selectioncuts.append(he)
         selectioncuts.append(end)
-
+    
     selections = []
     while selectioncuts:
         if selectioncuts[1]-selectioncuts[0] > 0:
             selections.append(selectioncuts[0:2])
         selectioncuts = selectioncuts[2:]
     selections = [(s,e,1,) for (s,e,) in selections]
+
+    selections = _connect_overlapping_selections(selections)
+
     return selections
 
 
@@ -360,12 +405,14 @@ def overdiff_intraparagraph(paragraph2, diffs):
     sentenceends.insert(0,0)
 
     for x,y in _ordered_pairs(sentenceends):
-        sels = expand_selection(paragraph2, x,y, '.', sels)
-        sels.sort(key=itemgetter(0))
+        # commented out due to overzealous algorithm, tbc.
+
+        #sels = expand_selection(paragraph2, x,y, '.', sels)
+        #sels.sort(key=itemgetter(0))
         sels = expand_selection(paragraph2, x,y, ' ', sels)
         sels.sort(key=itemgetter(0))
-        sels = expand_selection(paragraph2, x,y, '.', sels)
-        sels.sort(key=itemgetter(0))
+        #sels = expand_selection(paragraph2, x,y, '.', sels)
+        #sels.sort(key=itemgetter(0))
 
     return sels
 
