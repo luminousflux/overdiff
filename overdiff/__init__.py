@@ -314,7 +314,9 @@ def selections_split_markdown(haystack, selections):
     import markdown
 
     untouchables = [r'\n\*\s', r'\n\+\s', r'\n-\s', r'\n\s*\d+\.\s', ]
-    impartibles = [markdown.inlinepatterns.LINK_RE, ]
+    impartibles = [markdown.inlinepatterns.LINK_RE,
+            markdown.inlinepatterns.IMAGE_LINK_RE,
+            markdown.inlinepatterns.IMAGE_REFERENCE_RE,]
 
     for x in untouchables[0:len(untouchables)]:
         untouchables.append(x.replace(r'\n',r'^'))
