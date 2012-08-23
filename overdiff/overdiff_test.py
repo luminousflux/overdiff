@@ -35,7 +35,6 @@ haystack = "asdfasdfasdfasdfasdfa sdfasdfas dfasdf   asdfasdfasdf asdf"
 
 
 class OverdiffTest(unittest.TestCase):
-
     def testSplit(self):
         start = 0
         end = len(haystack)
@@ -81,7 +80,6 @@ class OverdiffTest(unittest.TestCase):
 
     def testDiff(self):
         diffs = list(overdiff.overdiff(text1, text2))
-        print diffs
 
 
 if __name__ == '__main__':
