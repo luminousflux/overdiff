@@ -424,8 +424,7 @@ def _ordered_pairs(collection):
         >>> [x for x in _ordered_pairs([0,1,2,3])]
         [(0, 1), (1, 2), (2, 3)]
     """
-    for i,y in zip(xrange(0,len(collection)-1), xrange(1, len(collection))):
-        yield collection[i], collection[y]
+    return zip(collection[:-1], collection[1:])
 
 def overdiff_intraparagraph(paragraph2, diffs):
     sentences = [0]
