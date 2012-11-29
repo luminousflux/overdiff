@@ -269,7 +269,7 @@ def expand_selection(haystack, hstart, hend, token, selections, expand_ratio = .
             for s in splitsels:
                 sels.remove(s)
             # TODO: improve overestimation of weight here
-            sels.append((splitstart, splitend, selected_weighted/selected_num,))
+            sels.append((splitstart, splitend, selected_weighted/(selected_num or 1),))
     return sels
 
 
