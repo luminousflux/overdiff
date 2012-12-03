@@ -296,7 +296,7 @@ def selection_to_s(haystack, selections, markdown=False):
 
         block = start == 0 and end == len(haystack)
         if not block:
-            output.append('<ins markdown="true">%s</ins>' % haystack[start:end])
+            output.append('<ins>%s</ins>' % haystack[start:end])
         else:
             output.append('.ins %s' % haystack[start:end].strip('\n'))
         cur = end
@@ -363,7 +363,7 @@ def _include_ranges_at_edges(selection, ranges):
 def selections_split_markdown(haystack, selections):
     import markdown
 
-    untouchables = [r'\n\s*\*\s', r'\n\s*\+\s', r'\n\s*-\s', r'\n\s*\d+\.\s', r'^[ ]{0,3}\[([^\]]*)\]:\s*([^ ]*)[ ]*.*$', r'^<object.*>$', r'^<embed.*>$', r'^<iframe.*>$' ]
+    untouchables = [r'\n\s*\*\s', r'\n\s*\+\s', r'\n\s*-\s', r'\n\s*\d+\.\s', r'^[ ]{0,3}\[([^\]]*)\]:\s*([^ ]*)[ ]*.*$', r'^<object.*>$', r'^<embed.*>$', r'^<iframe.*>$', r'\[imd\]', r'\[/imd\]']
     impartibles = [markdown.inlinepatterns.LINK_RE,
             markdown.inlinepatterns.IMAGE_LINK_RE,
             markdown.inlinepatterns.IMAGE_REFERENCE_RE,]
