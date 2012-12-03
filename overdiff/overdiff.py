@@ -231,7 +231,7 @@ def split_at_token(haystack, hstart, hend, token, selections):
     return sels
 
 
-def expand_selection(haystack, hstart, hend, token, selections, expand_ratio = .2):
+def expand_selection(haystack, hstart, hend, token, selections, expand_ratio = .5):
     """Expands selections between intervals, which are marked by tokens.
 
     :param haystack     a string in which to work
