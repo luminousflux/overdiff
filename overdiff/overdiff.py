@@ -363,7 +363,7 @@ def _include_ranges_at_edges(selection, ranges):
 def selections_split_markdown(haystack, selections):
     import markdown
 
-    untouchables = [r'\n\s*\*\s', r'\n\s*\+\s', r'\n\s*-\s', r'\n\s*\d+\.\s', r'^[ ]{0,3}\[([^\]]*)\]:\s*([^ ]*)[ ]*.*$', r'^<object.*>$', r'^<embed.*>$', r'^<iframe.*>$', r'\[imd\]', r'\[/imd\]']
+    untouchables = [r'\n\s*\*\s', r'\n\s*\+\s', r'\n\s*-\s', r'\n\s*\d+\.\s', r'^[ ]{0,3}\[([^\]]*)\]:\s*([^ ]*)[ ]*.*$', r'^<object.*>$', r'^<embed.*>$', r'^<iframe.*>$', r'\[imd\]', r'\[/imd\]', r'||']
     impartibles = [markdown.inlinepatterns.LINK_RE,
             markdown.inlinepatterns.IMAGE_LINK_RE,
             markdown.inlinepatterns.IMAGE_REFERENCE_RE,]
