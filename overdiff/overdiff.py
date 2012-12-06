@@ -316,7 +316,6 @@ def _connect_overlapping_selections(selections):
     newselections = []
     for selection in selections:
         if newselections and newselections[-1][1] >= selection[0]:
-            print 'should connect overlapping: %s, %s' % (repr(newselections[-1]), repr(selection),)
             if selection[1] > newselections[-1][0]: # exclude the case where selection is a subset of newselection[-1]
                 t = list(newselections[-1])
                 t[1] = selection[1]
@@ -363,10 +362,13 @@ def _include_ranges_at_edges(selection, ranges):
 def selections_split_markdown(haystack, selections):
     import markdown
 
-    untouchables = [r'\n\s*\*\s', r'\n\s*\+\s', r'\n\s*-\s', r'\n\s*\d+\.\s', r'^[ ]{0,3}\[([^\]]*)\]:\s*([^ ]*)[ ]*.*$', r'^<object.*>$', r'^<embed.*>$', r'^<iframe.*>$', r'\[imd\]', r'\[/imd\]', r'||']
+    untouchables = [r'\n\s*\*\s', r'\n\s*\+\s', r'\n\s*-\s', r'\n\s*\d+\.\s', r'^[ ]{0,3}\[([^\]]*)\]:\s*([^ ]*)[ ]*.*$', r'^<object.*>$', r'^<embed.*>$', r'^<iframe.*>$', r'\[imd\]', r'\[/imd\]', r'\|\|']
+
     impartibles = [markdown.inlinepatterns.LINK_RE,
             markdown.inlinepatterns.IMAGE_LINK_RE,
             markdown.inlinepatterns.IMAGE_REFERENCE_RE,]
+    
+    selections = _connect_overlapping_selections(selections)
 
     for x in untouchables[0:len(untouchables)]:
         untouchables.append(x.replace(r'\n',r'^'))
