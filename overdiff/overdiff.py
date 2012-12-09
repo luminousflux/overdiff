@@ -307,7 +307,8 @@ def _find_REs(REs, haystack):
     """ takes a list of regular expressions, returns a sorted list of (start,end) spans where either of them were found in haystack """
     matches = []
     for ble in REs:
-        for m in re.finditer(ble, haystack):
+        f = ble.finditer if hasattr(ble, 'finditer') else lambda x:re.finditer(ble, x)
+        for m in f(haystack):
             matches.append(m.span())
     matches.sort()
     return matches
@@ -362,16 +363,22 @@ def _include_ranges_at_edges(selection, ranges):
 def selections_split_markdown(haystack, selections):
     import markdown
 
-    untouchables = [r'\n\s*\*\s', r'\n\s*\+\s', r'\n\s*-\s', r'\n\s*\d+\.\s', r'^[ ]{0,3}\[([^\]]*)\]:\s*([^ ]*)[ ]*.*$', r'^<object.*>$', r'^<embed.*>$', r'^<iframe.*>$', r'\[imd\]', r'\[/imd\]', r'\|\|']
+    untouchables = [r'\n\s*\*\s', r'\n\s*\+\s', r'\n\s*-\s', r'\n\s*\d+\.\s', r'^[ ]{0,3}\[([^\]]*)\]:\s*([^ ]*)[ ]*.*$', r'^<object.*>$', r'^<embed.*>$', r'^<iframe.*>$', r'\[imd\]', r'\[/imd\]', r'\|\|', r'^\s*\[[^\]]*\]:[^\n]*$', markdown.preprocessors.ReferencePreprocessor.RE,
+            r'\*\*',
+            r'\*',
+            ]
 
     impartibles = [markdown.inlinepatterns.LINK_RE,
             markdown.inlinepatterns.IMAGE_LINK_RE,
-            markdown.inlinepatterns.IMAGE_REFERENCE_RE,]
+            markdown.inlinepatterns.IMAGE_REFERENCE_RE,
+            r'\[[^\]]*\]\[[^\]]*\]',
+            ]
     
     selections = _connect_overlapping_selections(selections)
 
     for x in untouchables[0:len(untouchables)]:
-        untouchables.append(x.replace(r'\n',r'^'))
+        if hasattr(x, 'replace'):
+            untouchables.append(x.replace(r'\n',r'^'))
     string = haystack
     holes = _find_REs(untouchables, string)
     fills = _find_REs(impartibles, string)
