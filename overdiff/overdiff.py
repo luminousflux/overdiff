@@ -272,6 +272,28 @@ def expand_selection(haystack, hstart, hend, token, selections, expand_ratio = .
             sels.append((splitstart, splitend, selected_weighted/(selected_num or 1),))
     return sels
 
+def _remove_overlaps(ranges):
+    # from http://codereview.stackexchange.com/questions/21307/consolidate-list-of-ranges-that-overlap-in-python
+    result = []
+    current_start = -1
+    current_stop = -1 
+
+    for start, stop in sorted(ranges):
+        if start > current_stop:
+            # this segment starts after the last segment stops
+            # just add a new segment
+            result.append( (start, stop) )
+            current_start, current_stop = start, stop
+        else:
+            if stop < current_stop:
+                continue
+            # segements overlap, replace
+            result[-1] = (current_start, stop)
+            # current_start already guaranteed to be lower
+            current_stop = max(current_stop, stop)
+
+    return result
+
 
 def selection_to_s(haystack, selections, markdown=False):
     """return haystack with highlighted selected parts
@@ -310,8 +332,7 @@ def _find_REs(REs, haystack):
         f = ble.finditer if hasattr(ble, 'finditer') else lambda x:re.finditer(ble, x)
         for m in f(haystack):
             matches.append(m.span())
-    matches.sort()
-    return matches
+    return _remove_overlaps(matches)
 
 def _connect_overlapping_selections(selections):
     newselections = []
@@ -359,11 +380,16 @@ def _include_ranges_at_edges(selection, ranges):
         end = otherends[-1]
     return start, end
 
-
 def selections_split_markdown(haystack, selections):
     import markdown
 
-    untouchables = [r'\n\s*\*\s', r'\n\s*\+\s', r'\n\s*-\s', r'\n\s*\d+\.\s', r'^[ ]{0,3}\[([^\]]*)\]:\s*([^ ]*)[ ]*.*$', r'^<object.*>$', r'^<embed.*>$', r'^<iframe.*>$', r'\[imd\]', r'\[/imd\]', r'\|\|', r'^\s*\[[^\]]*\]:[^\n]*$', markdown.preprocessors.ReferencePreprocessor.RE,
+    untouchables = [
+            r'<a .*>[^/]*</a>',
+            r'<script.*</script>',
+            r'\n<script.*</script>',
+            r'\n\n<script.*</script>',
+            r'\n\s*\*\s', r'\n\s*\+\s', r'\n\s*-\s', r'\n\s*\d+\.\s', r'^[ ]{0,3}\[([^\]]*)\]:\s*([^ ]*)[ ]*.*$', r'^<object.*>$', r'^<embed.*>$', r'^<iframe.*>$', r'\[imd\]', r'\[/imd\]', r'\|\|', r'^\s*\[[^\]]*\]:[^\n]*$',
+            markdown.preprocessors.ReferencePreprocessor.RE,
             r'\*\*',
             r'\*',
             ]
@@ -373,7 +399,7 @@ def selections_split_markdown(haystack, selections):
             markdown.inlinepatterns.IMAGE_REFERENCE_RE,
             r'\[[^\]]*\]\[[^\]]*\]',
             ]
-    
+
     selections = _connect_overlapping_selections(selections)
 
     for x in untouchables[0:len(untouchables)]:
